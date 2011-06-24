@@ -1,19 +1,40 @@
 {
-	"server": {
-		"host": "irc.rizon.net",
-		"port": 6667,
-		"ssl": false,
-		"pass": ""
+	"freenode": {
+		"server": {
+			"host": "irc.freenode.net",
+			"port": 7000,
+			"ssl": true,
+			"pass": ""
+		},
+		
+		"bot": {
+			"nick": "Shizuku",
+			"user": "Kirishima",
+			"real": "霧島 雫",
+			"pass": ""
+		},
+		
+		"channels": [
+			"#shizuku"
+		]
 	},
-	
-	"bot": {
-		"nick": "Shizuku",
-		"user": "Kirishima",
-		"real": "霧島 雫",
-		"pass": ""
-	},
-	
-	"channels": [
-		"#shizuku"
-	]
+	"rizon": {
+		"server": {
+			"host": "irc.rizon.net",
+			"port": 6667,
+			"ssl": false,
+			"pass": ""
+		},
+		
+		"bot": {
+			"nick": "Shizuku",
+			"user": "Kirishima",
+			"real": "霧島 雫",
+			"pass": ""
+		},
+		
+		"channels": [
+			"#shizuku"
+		]
+	}
 }
