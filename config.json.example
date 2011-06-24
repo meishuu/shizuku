@@ -1,0 +1,18 @@
+{
+	"server": {
+		"host": "irc.rizon.net",
+		"port": 6667,
+		"pass": ""
+	},
+	
+	"bot": {
+		"nick": "Shizuku",
+		"user": "Kirishima",
+		"real": "霧島 雫",
+		"pass": ""
+	},
+	
+	"channels": [
+		"#shizuku"
+	]
+}

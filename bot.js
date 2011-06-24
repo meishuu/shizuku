@@ -1,23 +1,22 @@
-var net = require('net'), irc = {};
-var config = {
-	server: {
-		host: 'irc.rizon.net',
-		port: 6667,
-		pass: '',
-	},
-	
-	bot: {
-		nick: 'Shizuku',
-		user: 'Kirishima',
-		real: '霧島 雫',
-		pass: '',
-	},
-	
-	// channels
-	channels: [
-		'#shizuku',
-	],
+var fs = require('fs'), net = require('net'), irc = {}, config;
+try {
+	config = fs.readFileSync('config.json', 'utf8');
+} catch (e) {
+	console.error('[ERROR] config.json: ' + e.message);
+	console.error('[ERROR] config.json: error opening file');
+	process.exit(1);
 }
+config = JSON.parse(config);
+/* JSON.parse()'s error is probably more informative
+try {
+	config = JSON.parse(config);
+} catch (e) {
+	console.log(e);
+	console.error('[ERROR] config.json: ' + e.message);
+	console.error('[ERROR] config.json: error parsing file');
+	process.exit(1);
+}
+*/
 
 // socket stuff
 irc.socket = new net.Socket();
