@@ -1,5 +1,5 @@
-var fs = require('fs'), net = require('net'), tls = require('tls');
-var irc = require('./classes/irc.js'), config;
+var fs = require('fs');
+var irc = require(__dirname + '/classes/irc.js'), config;
 try {
 	config = fs.readFileSync('config.json', 'utf8');
 } catch (e) {
@@ -19,13 +19,12 @@ try {
 }
 */
 
-// TODO: bot class
 var bot = function(config){
 	this.config = config;
+	this.modules = require(__dirname + '/classes/modules.js').init(this);
+	for (var i in config.modules) this.modules.load(config.modules[i]);
 };
 bot.prototype = {
-	modules: {emit: function(){}},
-	
 	connect: function(){
 		this.irc = irc.init(this);
 	},
