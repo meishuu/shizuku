@@ -2,6 +2,7 @@
 	"server": {
 		"host": "irc.rizon.net",
 		"port": 6667,
+		"ssl": false,
 		"pass": ""
 	},
 	

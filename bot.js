@@ -1,4 +1,5 @@
-var fs = require('fs'), net = require('net'), irc = {}, config;
+var fs = require('fs'), net = require('net'), tls = require('tls');
+var irc = {}, config;
 try {
 	config = fs.readFileSync('config.json', 'utf8');
 } catch (e) {
@@ -19,9 +20,18 @@ try {
 */
 
 // socket stuff
-irc.socket = new net.Socket();
+if (config.server.ssl) {
+	irc.socket = tls.connect(config.server.port, config.server.host, function(){
+		irc.socket.emit('connect');
+	});
+} else {
+	irc.socket = net.createConnection(config.server.port, config.server.host);
+}
 irc.socket.on('connect', function(){
-	console.log('hooray');
+	// settings
+	irc.socket.setNoDelay();
+	irc.socket.setEncoding('utf8');
+	// irc auth
 	if (config.server.pass) irc.sendRaw('PASS ' + config.server.pass);
 	irc.sendRaw('NICK ' + config.bot.nick);
 	irc.sendRaw('USER ' + config.bot.user + ' 0 * :' + config.bot.real);
@@ -33,10 +43,6 @@ irc.socket.on('data', function(data){
 		irc.handle(data[i]);
 	}
 });
-
-irc.socket.setEncoding('utf8');
-irc.socket.setNoDelay();
-irc.socket.connect(config.server.port, config.server.host);
 
 // handler
 irc.handle = function(data){
