@@ -19,5 +19,8 @@ ModuleHandler.prototype.reload = function(){
 }
 
 ModuleHandler.prototype.emit = function(event, data){
-	for (var i in this._modules) this._modules[i].on(event, data);
+	for (var i in this._modules) {
+		var module = this._modules[i];
+		if (module[event]) module[event].apply(module, data);
+	}
 }

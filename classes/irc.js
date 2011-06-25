@@ -4,6 +4,7 @@ exports.init = function(bot){
 
 function IRC(bot) {
 	this.bot = bot;
+	this.buffer = '';
 	this.channels = {};
 	this.connect(bot.config.server);
 };
@@ -34,10 +35,12 @@ IRC.prototype = {
 		});
 		
 		this.socket.on('data', function(data){
-			data = data.split('\r\n');
-			for (var i = 0; i < data.length; i++) {
-				console.log('[' + server.host + '] << ' + data[i]);
-				self.handle(data[i]);
+			self.buffer += data;
+			var lines = self.buffer.split('\r\n');
+			self.buffer = lines.pop(); // either blank or the last unfinished line
+			for (var i = 0; i < lines.length; i++) {
+				console.log('[' + server.host + '] << ' + lines[i]);
+				self.handle(lines[i]);
 			}
 		});
 	},
@@ -63,7 +66,7 @@ IRC.prototype = {
 			data = data.split(' ');
 			if (data[0] == 'PING') this.sendRaw('PONG ' + data[1]);
 		} else {
-			data = data.substr(1);
+			data = data.substr(1); // strip off : at beginning
 			var pos = data.indexOf(':'), msg = '';
 			if (!~pos) {
 				data = data.split(' ');
@@ -72,21 +75,35 @@ IRC.prototype = {
 				data = data.substr(0, pos - 1).split(' ');
 			}
 			
-			if (isNaN(parseInt(data[1]))) {
-				switch (data[1]) {
-					case 'PING':
-						this.sendRaw('PONG :' + msg);
-						break;
+			if (isNaN(parseInt(data[1]))) { // client command
+				var from, cmd = data[1], to = data[2], match;
+				if (match = data[0].match(/(.+)!(.+)@(.+)/)) {
+					from = {
+						full:  match[0],
+						nick:  match[1],
+						ident: match[2],
+						host:  match[3],
+					};
+				} else {
+					from = {
+						full:  data[0],
+						nick:  '',
+						ident: '',
+						host:  '',
+					};
+				}
+				
+				switch (cmd) {
 					case 'PRIVMSG':
-						if (msg[0] == String.fromCharCode(1) && msg.substr(-1) == String.fromCharCode(1)) {
-							// ctcp handlers
-							this.bot.modules.emit('ctcp,' [data, msg]);
-							return;
+						if (msg[0] == '\x01' && msg.substr(-1) == '\x01') {
+							this.bot.modules.emit('onCtcp', [from, to, msg.substr(1, -1)]);
+						} else {
+							this.bot.modules.emit('onPrivmsg', [from, to, msg]);
 						}
 						break;
 				}
-				this.bot.modules.emit('message', [data, msg]);
-			} else {
+				this.bot.modules.emit('onClientMsg', [data, cmd, to, msg]);
+			} else { // server command
 				switch (data[1]) {
 					case '331': // RPL_NOTOPIC
 						break;
@@ -121,7 +138,7 @@ IRC.prototype = {
 						for (var i in this.bot.config.channels) this.joinChannel(this.bot.config.channels[i]);
 						break;
 				}
-				this.bot.modules.emit('serverMessage', [data, msg]);
+				this.bot.modules.emit('onServerMsg', [data, msg]);
 			}
 		}
 	},

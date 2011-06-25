@@ -7,17 +7,13 @@ try {
 	console.error('[ERROR] config.json: error opening file');
 	process.exit(1);
 }
-config = JSON.parse(config);
-/* JSON.parse()'s error is probably more informative
 try {
 	config = JSON.parse(config);
 } catch (e) {
-	console.log(e);
 	console.error('[ERROR] config.json: ' + e.message);
 	console.error('[ERROR] config.json: error parsing file');
 	process.exit(1);
 }
-*/
 
 var bot = function(config){
 	this.config = config;
