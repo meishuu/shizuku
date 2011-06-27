@@ -65,19 +65,19 @@ class IRC
 				switch cmd
 					when 'PRIVMSG'
 						if msg[0] == msg.substr(-1) == '\x01'
-							@bot.modules.emit 'onCtcp', [from, to, msg.substr(1, -1)]
+							@bot.modules.emit 'onCtcp', from, to, msg.substr(1, -1)
 						else
-							@bot.modules.emit 'onPrivmsg', [from, to, msg]
+							@bot.modules.emit 'onPrivmsg', from, to, msg
 				
-				@bot.modules.emit 'onClientMsg', [data, cmd, to, msg]
+				@bot.modules.emit 'onClientMsg', data, cmd, to, msg
 			
 			# server command
 			else
 				switch data[1]
 					when '331' # RPL_NOTOPIC
-						@channels[data[3].toLowerCase()].topic = {text: '', user: '', time: ''}
-					when '332' # RPL_TOPIC
 						@channels[data[3].toLowerCase()].topic.text ?= msg
+					when '332' # RPL_TOPIC
+						@channels[data[3].toLowerCase()].topic = {text: msg, user: '', time: ''}
 					when '333'
 						topic = @channels[data[3].toLowerCase()].topic
 						topic.user = data[4]
@@ -99,5 +99,5 @@ class IRC
 						@sendRaw "MODE #{ @bot.config.bot.nick } +B" # I'm a bot!
 						@joinChannel channel for channel in @bot.config.channels
 				
-				@bot.modules.emit 'onServerMsg', [data, msg]
+				@bot.modules.emit 'onServerMsg', data, msg
 		return

@@ -23,29 +23,45 @@ class ModuleHandler
 		@modules = {}
 	
 	load: (module) ->
-		path = require.resolve module
-		delete require.cache[path]
-		@modules[module] = require(module).init(@bot)
-		console.log "loaded module '#{module}'"
+		# kill cache from require
+		delete require.cache[require.resolve module]
+		# set up module
+		m = new require(module)
+		m._events = {}
+		m.bot = @bot
+		m.on = (event, handler) =>
+			m._events[event] ?= []
+			m._events[event].push handler
+		# load it!
+		try
+			m.module.call m
+		catch e
+			console.log "[#{@bot.id}] ModuleHandler: ERROR! #{e.message}"
+			console.log "[#{@bot.id}] ModuleHandler: ERROR! failed to load '#{module}'"
+			return false
+		@modules[module] = m
+		console.log "[#{@bot.id}] ModuleHandler: loaded '#{module}'"
 	
 	reload: ->
-		this.load module for module in @modules
+		@load module for module of @modules
 		return
 	
-	emit: (event, data) ->
+	emit: (event, args...) ->
 		for $, module of @modules
-			module[event].apply module, data if module[event]?
+			if module._events[event]?
+				handler.apply module, args for handler in module._events[event]
+		return
 
 # bot class
 class bot
-	constructor: (@config) ->
-		@modules = new ModuleHandler(this)
+	constructor: (@id, @config) ->
+		@modules = new ModuleHandler(@)
 		@modules.load module for module in @config.modules
 	
 	connect: ->
-		@irc = new IRC(this)
+		@irc = new IRC(@)
 
 # init
 bots = {}
 for id, settings of config
-	(bots[id] = new bot(settings)).connect()
+	(bots[id] = new bot(id, settings)).connect()
