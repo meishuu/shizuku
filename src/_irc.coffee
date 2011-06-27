@@ -39,9 +39,8 @@ class IRC
 		@socket.write data + '\r\n', 'utf8', () =>
 			console.log "[#{@bot.config.server.host}] << #{data}"
 	
-	joinChannel: (channel, key = '') ->
-		@channels[channel.toLowerCase()] = {topic: {}, users: {}}
-		@sendRaw "JOIN #{channel} #{key}"
+	getChannel: (channel) ->
+		@channels[channel.toLowerCase()] ?= {topic: {text: '', user: '', time: ''}, users: {}}
 	
 	handle: (data) ->
 		if data[0] isnt ':' # server command
@@ -74,30 +73,48 @@ class IRC
 			# server command
 			else
 				switch data[1]
+					when '376', '422' # "End of /MOTD command." or "MOTD File is missing"
+						@sendRaw "MODE #{@bot.config.bot.nick} +B" # I'm a bot!
+						for c in @bot.config.channels
+							[chan, key] = c.split ','
+							@sendRaw "JOIN #{chan} #{key || ''}"
+					
 					when '331' # RPL_NOTOPIC
-						@channels[data[3].toLowerCase()].topic.text ?= msg
+						@getChannel(data[3]).topic = {text: '', user: '', time: ''}
 					when '332' # RPL_TOPIC
-						@channels[data[3].toLowerCase()].topic = {text: msg, user: '', time: ''}
+						@getChannel(data[3]).topic.text = msg
 					when '333'
-						topic = @channels[data[3].toLowerCase()].topic
+						topic = @getChannel(data[3]).topic
 						topic.user = data[4]
 						topic.time = data[5]
 					
 					when '353' # RPL_NAMREPLY
-						users = (@channels[data[4].toLowerCase()].users ?= {})
-						for nick in msg.split(' ')
+						users = @getChannel(data[4]).users
+						for nick in msg.split ' '
 							if nick isnt ''
-								if '~&@%+'.indexOf(nick[0]) isnt -1
-									users[nick.substr(1)] = nick[0]
-								else
-									users[nick] = ''
+								nick = nick.split ''
+								# parse user modes
+								modes = while '~&@%+'.indexOf(nick[0]) isnt -1
+									nick.shift()
+								# init object in users[] array
+								users[nick.join('').toLowerCase()] =
+									modes: modes
+									server: ''
+									ident: ''
+									real: ''
+									host: ''
 					when '366' # RPL_ENDOFNAMES
-						# we should probably do a WHO on the channel here
-						;
+						@getChannel(data[3]).users = {}
+						@sendRaw "WHO #{data[3]}"
 					
-					when '376', '422' # "End of /MOTD command." or "MOTD File is missing"
-						@sendRaw "MODE #{ @bot.config.bot.nick } +B" # I'm a bot!
-						@joinChannel channel for channel in @bot.config.channels
+					when '352' # RPL_WHOREPLY
+						user = (@getChannel(data[3]).users[data[7].toLowerCase()] ?= {})
+						user.ident  = data[4]
+						user.host   = data[5]
+						user.server = data[6]
+						user.real   = msg.split(' ', 2)[1]
+					when '315' # RPL_ENDOFWHO
+						;
 				
 				@bot.modules.emit 'onServerMsg', data, msg
 		return
