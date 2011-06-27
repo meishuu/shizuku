@@ -2,6 +2,7 @@ class IRC
 	constructor: (@bot) ->
 		@buffer = ''
 		@channels = {}
+		@users = {}
 		@connect @bot.config.server
 	
 	connect: (server) ->
@@ -42,6 +43,9 @@ class IRC
 	getChannel: (channel) ->
 		@channels[channel.toLowerCase()] ?= {topic: {text: '', user: '', time: ''}, users: {}}
 	
+	getUser: (nick) ->
+		@users[nick.toLowerCase()] ?= {ident: '', host: '', server: '', nick: '', away: false, modes: [], hops: 0, real: ''}
+	
 	handle: (data) ->
 		if data[0] isnt ':' # server command
 			data = data.split ' '
@@ -72,6 +76,7 @@ class IRC
 			
 			# server command
 			else
+				_modes = '~&@%+'
 				switch data[1]
 					when '376', '422' # "End of /MOTD command." or "MOTD File is missing"
 						@sendRaw "MODE #{@bot.config.bot.nick} +B" # I'm a bot!
@@ -92,27 +97,31 @@ class IRC
 						users = @getChannel(data[4]).users
 						for nick in msg.split ' '
 							if nick isnt ''
+								# separate out user modes
 								nick = nick.split ''
-								# parse user modes
-								modes = while '~&@%+'.indexOf(nick[0]) isnt -1
+								modes = while _modes.indexOf(nick[0]) isnt -1
 									nick.shift()
-								# init object in users[] array
-								users[nick.join('').toLowerCase()] =
-									modes: modes
-									server: ''
-									ident: ''
-									real: ''
-									host: ''
+								# add to channel.users[] array
+								users[nick.join('').toLowerCase()] = modes
 					when '366' # RPL_ENDOFNAMES
 						@getChannel(data[3]).users = {}
 						@sendRaw "WHO #{data[3]}"
 					
 					when '352' # RPL_WHOREPLY
-						user = (@getChannel(data[3]).users[data[7].toLowerCase()] ?= {})
-						user.ident  = data[4]
-						user.host   = data[5]
-						user.server = data[6]
-						user.real   = msg.split(' ', 2)[1]
+						modestr = data[8].split ''
+						away = modestr.shift() == 'G'
+						modes = (mode for mode in modestr when _modes.indexOf(mode) is -1)
+						[hops, real...] = msg.split ' '
+						#@getUser(data[7]) =
+						@users[data[7].toLowerCase()] =
+							ident  : data[4]
+							host   : data[5]
+							server : data[6]
+							nick   : data[7]
+							away   : away
+							modes  : modes
+							hops   : parseInt hops
+							real   : real.join ' '
 					when '315' # RPL_ENDOFWHO
 						;
 				
