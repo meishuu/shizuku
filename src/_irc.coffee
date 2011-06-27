@@ -68,11 +68,13 @@ class IRC
 				switch cmd
 					when 'PRIVMSG'
 						if msg[0] == msg.substr(-1) == '\x01'
-							@bot.modules.emit 'onCtcp', from, to, msg.substr(1, -1)
+							@bot.modules.emit 'ctcp', from, to, msg.substr(1, -1)
 						else
-							@bot.modules.emit 'onPrivmsg', from, to, msg
+							@bot.modules.emit 'privmsg', from, to, msg
+					else
+						@bot.modules.emit cmd.toLowerCase(), from, to, msg
 				
-				@bot.modules.emit 'onClientMsg', data, cmd, to, msg
+				@bot.modules.emit 'clientMsg', data, cmd, to, msg
 			
 			# server command
 			else
@@ -112,7 +114,6 @@ class IRC
 						away = modestr.shift() == 'G'
 						modes = (mode for mode in modestr when _modes.indexOf(mode) is -1)
 						[hops, real...] = msg.split ' '
-						#@getUser(data[7]) =
 						@users[data[7].toLowerCase()] =
 							ident  : data[4]
 							host   : data[5]
@@ -125,5 +126,5 @@ class IRC
 					when '315' # RPL_ENDOFWHO
 						;
 				
-				@bot.modules.emit 'onServerMsg', data, msg
+				@bot.modules.emit 'serverMsg', data, msg
 		return
