@@ -8,13 +8,13 @@ class IRC
 	connect: (server) ->
 		# init connection
 		if server.ssl
-			@socket = require('tls').connect server.port, server.host, () =>
+			@socket = require('tls').connect server.port, server.host, =>
 				@socket.emit 'connect'
 		else
 			@socket = require('net').createConnection server.port, server.host
 		
 		# event handlers
-		@socket.on 'connect', () =>
+		@socket.on 'connect', =>
 			# setings
 			@socket.setNoDelay()
 			@socket.setEncoding 'utf8'
@@ -37,7 +37,7 @@ class IRC
 		return
 	
 	sendRaw: (data) ->
-		@socket.write data + '\r\n', 'utf8', () =>
+		@socket.write data + '\r\n', 'utf8', =>
 			console.log "[#{@bot.config.server.host}] << #{data}"
 	
 	getChannel: (channel) ->
