@@ -44,7 +44,7 @@ class IRC
 			console.log "[#{@bot.config.server.host}] << #{data}"
 	
 	getChannel: (channel) ->
-		@channels[channel.toLowerCase()] ?= {topic: {text: '', user: '', time: ''}, users: {}}
+		@channels[channel.toLowerCase()] ?= {created: 0, topic: {text: '', user: '', time: ''}, users: {}, modes: []}
 	
 	getUser: (nick) ->
 		@users[nick.toLowerCase()] ?= {ident: '', host: '', server: '', nick: '', away: false, modes: [], hops: 0, real: ''}
@@ -72,6 +72,12 @@ class IRC
 				}
 				
 				switch cmd
+					# JOIN #
+					when 'JOIN'
+						break if from.nick isnt @bot.nick
+						@sendRaw "MODE #{msg}"
+						@sendRaw "WHO #{msg}"
+					
 					# KICK #
 					when 'KICK'
 						if data[3] == @bot.nick
@@ -79,6 +85,11 @@ class IRC
 						else
 							channel = @getChannel data[2]
 							delete channel.users[data[3].toLowerCase()]
+					
+					when 'MODE'
+						if (channel = data[2])[0] == '#'
+							@sendRaw "MODE #{data[2]}"
+							@sendRaw "NAMES #{data[2]}"
 					
 					# NICK #
 					when 'NICK'
@@ -108,6 +119,12 @@ class IRC
 						else
 							@bot.modules.emit 'privmsg', from, to, msg
 					
+					# QUIT #
+					when 'QUIT'
+						user = from.nick.toLowerCase()
+						delete @users[user]
+						(delete channel.users[user] if channel.users[user]?) for $, channel of @channels
+					
 					# else #
 					else
 						@bot.modules.emit cmd.toLowerCase(), from, to, msg
@@ -132,6 +149,12 @@ class IRC
 						topic.user = data[4]
 						topic.time = data[5]
 					
+					when '324' # RPL_CHANNELMODES
+						# TODO: actually parse this
+						@getChannel(data[3]).modes = data[4].substr(1).split('')
+					when '329' # RPL_CREATIONTIME
+						@getChannel(data[3]).created = data[4]
+					
 					when '353' # RPL_NAMREPLY
 						users = @getChannel(data[4]).users
 						for nick in msg.split ' '
@@ -143,7 +166,7 @@ class IRC
 								# add to channel.users[] array
 								users[nick.join('').toLowerCase()] = modes
 					when '366' # RPL_ENDOFNAMES
-						@sendRaw "WHO #{data[3]}"
+						;
 					
 					when '352' # RPL_WHOREPLY
 						modestr = data[8].split ''
