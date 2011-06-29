@@ -1,3 +1,5 @@
+_modes = '~&@%+'
+
 class IRC
 	constructor: (@bot) ->
 		@buffer = ''
@@ -23,6 +25,7 @@ class IRC
 			@sendRaw "PASS #{server.pass}" if server.pass isnt ''
 			@sendRaw "NICK #{@bot.config.bot.nick}"
 			@sendRaw "USER #{@bot.config.bot.user} 0 * :#{@bot.config.bot.real}"
+			@bot.nick = @bot.config.bot.nick
 			return
 		
 		@socket.on 'data', (data) =>
@@ -51,7 +54,10 @@ class IRC
 			data = data.split ' '
 			@sendRaw "PONG #{data[1]}" if data[0] is 'PING'
 		else
-			[data, msg] = data.substr(1).split(':', 2)
+			if (pos = (data = data.substr 1).indexOf ' :') isnt -1
+				msg = data.substr pos + 2
+				data = data.substr 0, pos
+			
 			data = data.split ' '
 			
 			# client command
@@ -66,11 +72,43 @@ class IRC
 				}
 				
 				switch cmd
+					# KICK #
+					when 'KICK'
+						if data[3] == @bot.nick
+							delete @channels[data[2].toLowerCase()]
+						else
+							channel = @getChannel data[2]
+							delete channel.users[data[3].toLowerCase()]
+					
+					# NICK #
+					when 'NICK'
+						oldnick = from.nick.toLowerCase()
+						newnick = msg.toLowerCase()
+						
+						# update @bot.nick
+						@bot.nick = msg if from.nick == @bot.nick
+						
+						# update @channels
+						for $, channel of @channels
+							if (mode = channel.users[oldnick])?
+								channel.users[newnick] = mode
+								delete channel.users[oldnick]
+						
+						# update @users
+						@users[newnick] = @getUser oldnick
+						delete @users[oldnick]
+						
+						# emit
+						@bot.modules.emit 'nick', from, msg
+					
+					# PRIVMSG #
 					when 'PRIVMSG'
 						if msg[0] == msg.substr(-1) == '\x01'
 							@bot.modules.emit 'ctcp', from, to, msg.substr(1, -1)
 						else
 							@bot.modules.emit 'privmsg', from, to, msg
+					
+					# else #
 					else
 						@bot.modules.emit cmd.toLowerCase(), from, to, msg
 				
@@ -78,7 +116,6 @@ class IRC
 			
 			# server command
 			else
-				_modes = '~&@%+'
 				switch data[1]
 					when '376', '422' # "End of /MOTD command." or "MOTD File is missing"
 						@sendRaw "MODE #{@bot.config.bot.nick} +B" # I'm a bot!
@@ -106,7 +143,6 @@ class IRC
 								# add to channel.users[] array
 								users[nick.join('').toLowerCase()] = modes
 					when '366' # RPL_ENDOFNAMES
-						@getChannel(data[3]).users = {}
 						@sendRaw "WHO #{data[3]}"
 					
 					when '352' # RPL_WHOREPLY
