@@ -19,6 +19,7 @@
 		],
 		
 		"modules": [
+			"ctcp",
 			"sample"
 		]
 	},
@@ -42,6 +43,7 @@
 		],
 		
 		"modules": [
+			"ctcp",
 			"sample"
 		]
 	}

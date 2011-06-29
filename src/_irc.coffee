@@ -104,7 +104,7 @@ class IRC
 					# PRIVMSG #
 					when 'PRIVMSG'
 						if msg[0] == msg.substr(-1) == '\x01'
-							@bot.modules.emit 'ctcp', from, to, msg.substr(1, -1)
+							@bot.modules.emit 'ctcp', from, to, msg.substring(1, msg.length - 1)
 						else
 							@bot.modules.emit 'privmsg', from, to, msg
 					
