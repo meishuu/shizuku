@@ -118,6 +118,11 @@ class IRC
 						# emit
 						@bot.modules.emit 'nick', from, msg
 					
+					# NOTICE #
+					when 'NOTICE'
+						if from.nick == 'NickServ' and msg.indexOf('IDENTIFY') isnt -1
+							@privmsg 'NickServ', "IDENTIFY #{@bot.config.bot.pass}" if @bot.config.bot.pass isnt ''
+					
 					# PRIVMSG #
 					when 'PRIVMSG'
 						if msg[0] == msg.substr(-1) == '\x01'
@@ -142,6 +147,7 @@ class IRC
 				switch data[1]
 					when '376', '422' # "End of /MOTD command." or "MOTD File is missing"
 						@sendRaw "MODE #{@bot.config.bot.nick} +B" # I'm a bot!
+						@privmsg 'NickServ' "IDENTIFY #{@bot.config.bot.pass}" if @bot.config.bot.pass isnt ''
 						for c in @bot.config.channels
 							[chan, key] = c.split ','
 							@sendRaw "JOIN #{chan} #{key || ''}"
