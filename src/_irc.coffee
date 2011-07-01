@@ -2,12 +2,12 @@ _modes = '~&@%+'
 
 class IRC
 	constructor: (@bot) ->
-		@buffer = ''
+		@_buffer = ''
 		@channels = {}
 		@users = {}
-		@connect @bot.config.server
+		@_connect @bot.config.server
 	
-	connect: (server) ->
+	_connect: (server) ->
 		# init connection
 		if server.ssl
 			@socket = require('tls').connect server.port, server.host, =>
@@ -29,11 +29,11 @@ class IRC
 			return
 		
 		@socket.on 'data', (data) =>
-			lines = (@buffer + data).split '\r\n'
-			@buffer = lines.pop()
+			lines = (@_buffer + data).split '\r\n'
+			@_buffer = lines.pop()
 			for line in lines
 				console.log "[#{server.host}] >> #{line}"
-				@handle line
+				@_handle line
 			return
 		
 		# done!
@@ -49,7 +49,13 @@ class IRC
 	getUser: (nick) ->
 		@users[nick.toLowerCase()] ?= {ident: '', host: '', server: '', nick: '', away: false, modes: [], hops: 0, real: ''}
 	
-	handle: (data) ->
+	privmsg: (to, msg) ->
+		@sendRaw "PRIVMSG #{to} :#{msg}"
+	
+	action: (to, action) ->
+		@privmsg to, "\x01ACTION #{action}\x01"
+	
+	_handle: (data) ->
 		if data[0] isnt ':' # server command
 			data = data.split ' '
 			@sendRaw "PONG #{data[1]}" if data[0] is 'PING'
