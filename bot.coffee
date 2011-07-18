@@ -1,10 +1,84 @@
-_modes = '~&@%+'
+# includes
+fs = require 'fs'
 
-class IRC
+# 1: read config file
+try
+	config = fs.readFileSync "#{__dirname}/config.json", 'utf8'
+catch e
+	console.error "[ERROR] config.json: #{e.message}"
+	console.error "[ERROR] config.json: error opening file"
+	process.exit 1
+
+# 2: parse it
+try
+	config = JSON.parse config
+catch e
+	console.error "[ERROR] config.json: #{e.message}"
+	console.error "[ERROR] config.json: error parsing file"
+	process.exit 1
+
+# ModuleHandler class
+class ModuleHandler
 	constructor: (@bot) ->
-		@_buffer = ''
+		@commands = {}
+		@modules = {}
+	
+	require: (module) ->
+		try
+			path = require.resolve module
+		catch e
+			console.warn "[#{@bot.id}] ModuleHandler: ERROR! [#{module}]: #{e.message}"
+			return false
+		
+		delete require.cache[path]
+		require(module)
+	
+	load: (module) ->
+		# set up module
+		m = new @require(module)
+		m._events = {}
+		m.bot = @bot
+		m.on = (event, handler) => (m._events[event] ?= []).push handler
+		m.cmd = (command, handler) =>
+			throw "command '#{command}' already registered" if @commands[command]?
+			@commands[command] = {module: m, func: handler}
+		m.require = @require
+		# load it!
+		try
+			m.module.call m
+		catch e
+			console.warn "[#{@bot.id}] ModuleHandler: ERROR! #{module}: failed to init module"
+			console.warn "[#{@bot.id}] ModuleHandler: ERROR! #{module}: #{e.message}"
+			return false
+		@modules[module] = m
+		console.log "[#{@bot.id}] ModuleHandler: loaded '#{module}'"
+		return true
+	
+	reload: ->
+		@load module for module of @modules
+		return
+	
+	emit: (event, args...) ->
+		for $, module of @modules
+			if module._events[event]?
+				try
+					handler.apply module, args for handler in module._events[event]
+				catch e
+					console.warn "[#{@bot.id}] ModuleHandler: ERROR! #{module}: error in event '#{event}'"
+					console.warn "[#{@bot.id}] ModuleHandler: ERROR! #{module}: #{e.message}"
+		return
+
+# IRC class
+class IRC
+	_modes = '~&@%+'
+	
+	constructor: (@bot) ->
 		@channels = {}
 		@users = {}
+		@_buffer =
+			in: ''
+			out:
+				queue: []
 		@_connect @bot.config.server
 	
 	_connect: (server) ->
@@ -17,7 +91,7 @@ class IRC
 		
 		# event handlers
 		@socket.on 'connect', =>
-			# setings
+			# socket settings
 			@socket.setNoDelay()
 			@socket.setEncoding 'utf8'
 			
@@ -29,15 +103,15 @@ class IRC
 			return
 		
 		@socket.on 'data', (data) =>
-			lines = (@_buffer + data).split '\r\n'
-			@_buffer = lines.pop()
+			lines = (@_buffer.in + data).split '\r\n'
+			@_buffer.in = lines.pop()
 			for line in lines
 				console.log "[#{server.host}] >> #{line}"
 				@_handle line
 			return
 		
 		# done!
-		return
+		true
 	
 	sendRaw: (data) ->
 		@socket.write data + '\r\n', 'utf8', =>
@@ -147,7 +221,7 @@ class IRC
 				switch data[1]
 					when '376', '422' # "End of /MOTD command." or "MOTD File is missing"
 						@sendRaw "MODE #{@bot.config.bot.nick} +B" # I'm a bot!
-						@privmsg 'NickServ' "IDENTIFY #{@bot.config.bot.pass}" if @bot.config.bot.pass isnt ''
+						@privmsg 'NickServ', "IDENTIFY #{@bot.config.bot.pass}" if @bot.config.bot.pass isnt ''
 						for c in @bot.config.channels
 							[chan, key] = c.split ','
 							@sendRaw "JOIN #{chan} #{key || ''}"
@@ -199,3 +273,17 @@ class IRC
 				
 				@bot.modules.emit 'serverMsg', data, msg
 		return
+
+# bot class
+class bot
+	constructor: (@id, @config) ->
+		@modules = new ModuleHandler(@)
+		@modules.load module for module in @config.modules
+	
+	connect: ->
+		@irc = new IRC(@)
+
+# init
+bots = {}
+for id, settings of config
+	(bots[id] = new bot(id, settings)).connect()
