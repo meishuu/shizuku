@@ -123,6 +123,9 @@ class IRC
 	getUser: (nick) ->
 		@users[nick.toLowerCase()] ?= {ident: '', host: '', server: '', nick: '', away: false, modes: [], hops: 0, real: ''}
 	
+	_setUser: (data) ->
+		@users[data.nick.toLowerCase()] = data
+	
 	privmsg: (to, msg) ->
 		@sendRaw "PRIVMSG #{to} :#{msg}"
 	
@@ -186,8 +189,8 @@ class IRC
 								delete channel.users[oldnick]
 						
 						# update @users
-						@users[newnick] = @getUser oldnick
 						delete @users[oldnick]
+						@sendRaw "WHOIS #{newnick}"
 						
 						# emit
 						@bot.modules.emit 'nick', from, msg
@@ -269,6 +272,37 @@ class IRC
 							hops   : parseInt hops
 							real   : real.join ' '
 					when '315' # RPL_ENDOFWHO
+						;
+					
+					when '311' # RPL_WHOISUSER
+						user = @getUser data[3]
+						user.nick  = data[3]
+						user.ident = data[4]
+						user.host  = data[5]
+						user.real  = msg
+						@_setUser user
+					when '307' # "is a registered nick"
+						user = @getUser data[3]
+						if ~user.modes.indexOf 'r'
+							user.modes.push 'r'
+							@_setUser user
+					when '319' # RPL_WHOISCHANNELS
+						;
+					when '312' # RPL_WHOISSERVER
+						user = @getUser data[3]
+						user.server = data[4]
+						@_setUser user
+					when '301' # RPL_AWAY
+						user = @getUser data[3]
+						user.away = true
+						@_setUser user
+					when '313' # RPL_WHOISOPERATOR
+						;
+					when '671' # "is using a Secure Connection"
+						;
+					when '317' # RPL_WHOISIDLE
+						;
+					when '318' # RPL_ENDOFWHOIS
 						;
 				
 				@bot.modules.emit 'serverMsg', data, msg
