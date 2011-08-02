@@ -286,7 +286,7 @@ class IRC
 						@_setUser user
 					when '307' # "is a registered nick"
 						user = @getUser data[3]
-						if ~user.modes.indexOf 'r'
+						if !~user.modes.indexOf 'r'
 							user.modes.push 'r'
 							@_setUser user
 					when '319' # RPL_WHOISCHANNELS
