@@ -1,5 +1,6 @@
 # includes
 fs = require 'fs'
+coffee = require 'coffee-script'
 
 # 1: read config file
 try
