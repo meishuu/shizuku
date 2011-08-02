@@ -132,6 +132,9 @@ class IRC
 	action: (to, action) ->
 		@privmsg to, "\x01ACTION #{action}\x01"
 	
+	notice: (to, msg) ->
+		@sendRaw "NOTICE #{to} :#{msg}"
+	
 	_handle: (data) ->
 		if data[0] isnt ':' # server command
 			data = data.split ' '
