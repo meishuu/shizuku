@@ -7,11 +7,15 @@
 			"pass": ""
 		},
 		
-		"bot": {
+		"user": {
 			"nick": "Shizuku",
 			"user": "Kirishima",
 			"real": "霧島 雫",
 			"pass": ""
+		},
+		
+		"config": {
+			"trigger": "."
 		},
 		
 		"channels": [
@@ -31,11 +35,15 @@
 			"pass": ""
 		},
 		
-		"bot": {
+		"user": {
 			"nick": "Shizuku",
 			"user": "Kirishima",
 			"real": "霧島 雫",
 			"pass": ""
+		},
+		
+		"config": {
+			"trigger": "!"
 		},
 		
 		"channels": [
