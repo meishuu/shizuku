@@ -46,6 +46,7 @@ class ModuleHandler
 			throw "command '#{command}' already registered" if @commands[command]?
 			@commands[command] = {module: m, func: handler}
 		m.require = @require
+		
 		# load it!
 		try
 			m.module.call m
