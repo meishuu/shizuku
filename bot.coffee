@@ -44,7 +44,7 @@ class ModuleHandler
 		m.on = (event, handler) => (m._events[event] ?= []).push handler
 		m.cmd = (command, handler) =>
 			throw "command '#{command}' already registered" if @commands[command]?
-			@commands[command] = {module: m, func: handler}
+			@commands[command.toLowerCase()] = {module: m, func: handler}
 		m.require = @require
 		
 		# load it!
@@ -59,6 +59,7 @@ class ModuleHandler
 		return true
 	
 	reload: ->
+		@commands = {}
 		@load module for module of @modules
 		return
 	
@@ -70,6 +71,18 @@ class ModuleHandler
 				catch e
 					console.warn "[#{@bot.id}] ModuleHandler: ERROR! #{name}: error in event '#{event}'"
 					console.warn "[#{@bot.id}] ModuleHandler: ERROR! #{name}: #{e.message}"
+		return
+	
+	command: (from, to, msg) ->
+		args = msg.split(' ')
+		cmd = args[0].substr(1).toLowerCase()
+		return if !(data = @commands[cmd])?
+		try
+			data.func.call data.module, from, to, {args, cmd, msg}
+		catch e
+			console.warn e
+			console.warn "[#{@bot.id}] ModuleHandler: ERROR! #{data.module}: error in command '#{cmd}'"
+			console.warn "[#{@bot.id}] ModuleHandler: ERROR! #{data.module}: #{e.message}"
 		return
 
 #######
@@ -215,6 +228,7 @@ class IRC
 							@bot.modules.emit 'ctcp', from, to, msg.substring(1, msg.length - 1)
 						else
 							@bot.modules.emit 'privmsg', from, to, msg
+							@bot.modules.command from, to, msg if msg[0] == @bot.config.config.trigger
 					
 					# QUIT #
 					when 'QUIT'
@@ -325,7 +339,7 @@ class UserSettings
 		@users = {}
 		@server = bot.id
 		
-		setInterval @_saveUsers, 300 * 1000 # 5 minutes
+		setInterval (=> @_saveUsers()), 300 * 1000 # 5 minutes
 		
 		fs.readFile "#{__dirname}/data/users.json", 'utf8', (err, data) =>
 			if err
