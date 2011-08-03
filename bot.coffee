@@ -62,13 +62,13 @@ class ModuleHandler
 		return
 	
 	emit: (event, args...) ->
-		for $, module of @modules
+		for name, module of @modules
 			if module._events[event]?
 				try
 					handler.apply module, args for handler in module._events[event]
 				catch e
-					console.warn "[#{@bot.id}] ModuleHandler: ERROR! #{module}: error in event '#{event}'"
-					console.warn "[#{@bot.id}] ModuleHandler: ERROR! #{module}: #{e.message}"
+					console.warn "[#{@bot.id}] ModuleHandler: ERROR! #{name}: error in event '#{event}'"
+					console.warn "[#{@bot.id}] ModuleHandler: ERROR! #{name}: #{e.message}"
 		return
 
 #######
