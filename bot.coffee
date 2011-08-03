@@ -357,7 +357,7 @@ class UserSettings
 			return from.nick.toLowerCase()
 	
 	getUserSetting: (from, module, setting, default_val) ->
-		return false if (user = @getUserID from) is false
+		return default_val if (user = @getUserID from) is false
 		@_get(@users, [@server, user, module, setting]) ? default_val
 	
 	setUserSetting: (from, module, setting, value) ->
