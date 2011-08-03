@@ -18,7 +18,9 @@ catch e
 	console.error "[ERROR] config.json: error parsing file"
 	process.exit 1
 
-# ModuleHandler class
+#################
+# ModuleHandler #
+#################
 class ModuleHandler
 	constructor: (@bot) ->
 		@commands = {}
@@ -69,7 +71,9 @@ class ModuleHandler
 					console.warn "[#{@bot.id}] ModuleHandler: ERROR! #{module}: #{e.message}"
 		return
 
-# IRC class
+#######
+# IRC #
+#######
 class IRC
 	_modes = '~&@%+'
 	
@@ -312,9 +316,58 @@ class IRC
 				@bot.modules.emit 'serverMsg', data, msg
 		return
 
-# bot class
+################
+# UserSettings #
+################
+class UserSettings
+	constructor: (bot) ->
+		@users = {}
+		@server = bot.id
+		
+		setInterval @_saveUsers, 300 * 1000 # 5 minutes
+		
+		fs.readFile "#{__dirname}/data/users.json", 'utf8', (err, data) =>
+			if err
+				throw err if err.code isnt 'ENOENT'
+				console.warn('[core_users] no users.json found. creating...');
+				@_saveUsers()
+			else
+				@users = JSON.parse data
+	
+	getUserID: (from) ->
+		return from.toLowerCase() if typeof(from) is 'string'
+		try
+			return require('core_auth').getUserID(from)
+		catch e
+			return from.nick.toLowerCase()
+	
+	getUserSetting: (from, module, setting, default_val) ->
+		return false if (user = @getUserID from) is false
+		@_get(@users, [@server, user, module, setting]) ? default_val
+	
+	setUserSetting: (from, module, setting, value) ->
+		return false if (user = @getUserID from) is false
+		@_set @users, [@server, user, module, setting], value
+	
+	_saveUsers: ->
+		console.log 'saving users.json'
+		fs.writeFile "#{__dirname}/data/users.json", JSON.stringify(@users), (err) -> console.warn err if err
+	
+	_get: (obj, keys) ->
+		obj = obj[keys.shift()] while keys.length and obj?
+		obj
+	
+	_set: (obj, keys, val) ->
+		final = keys.pop()
+		obj = obj[key] ?= {} for key in keys
+		obj[final] = val
+
+#######
+# bot #
+#######
 class bot
 	constructor: (@id, @config) ->
+		@users = new UserSettings(@)
 		@modules = new ModuleHandler(@)
 		@modules.load module for module in @config.modules
 	
