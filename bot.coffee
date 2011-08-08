@@ -344,10 +344,11 @@ class UserSettings
 		
 		setInterval (=> @_saveUsers()), 300 * 1000 # 5 minutes
 		
-		fs.readFile "#{__dirname}/data/users.json", 'utf8', (err, data) =>
+		fs.mkdir "#{__dirname}/data/users", 0644
+		fs.readFile "#{__dirname}/data/users/#{@server}.json", 'utf8', (err, data) =>
 			if err
 				throw err if err.code isnt 'ENOENT'
-				console.warn('[core_users] no users.json found. creating...');
+				console.warn('[core_users] no users file for "#{@server}". creating...');
 				@_saveUsers()
 			else
 				@users = JSON.parse data
@@ -361,15 +362,15 @@ class UserSettings
 	
 	getUserSetting: (from, module, setting, default_val) ->
 		return default_val if (user = @getUserID from) is false
-		@_get(@users, [@server, user, module, setting]) ? default_val
+		@_get(@users, [user, module, setting]) ? default_val
 	
 	setUserSetting: (from, module, setting, value) ->
 		return false if (user = @getUserID from) is false
-		@_set @users, [@server, user, module, setting], value
+		@_set @users, [user, module, setting], value
 	
 	_saveUsers: ->
 		console.log 'saving users.json'
-		fs.writeFile "#{__dirname}/data/users.json", JSON.stringify(@users), (err) -> console.warn err if err
+		fs.writeFile "#{__dirname}/data/users/#{@server}.json", JSON.stringify(@users), (err) -> console.warn err if err
 	
 	_get: (obj, keys) ->
 		obj = obj[keys.shift()] while keys.length and obj?
