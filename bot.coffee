@@ -344,14 +344,16 @@ class UserSettings
 		
 		setInterval (=> @_saveUsers()), 300 * 1000 # 5 minutes
 		
-		fs.mkdir "#{__dirname}/data/users", 0644
-		fs.readFile "#{__dirname}/data/users/#{@server}.json", 'utf8', (err, data) =>
-			if err
-				throw err if err.code isnt 'ENOENT'
-				console.warn('[core_users] no users file for "#{@server}". creating...');
-				@_saveUsers()
-			else
-				@users = JSON.parse data
+		folder = "#{__dirname}/data/users"
+		fs.stat folder, (err, stats) =>
+			fs.mkdirSync folder, 0644 if !stats.isDirectory()
+			fs.readFile "#{folder}/#{@server}.json", 'utf8', (err, data) =>
+				if err
+					throw err if err.code isnt 'ENOENT'
+					console.warn('[core_users] no users file for "#{@server}". creating...');
+					@_saveUsers()
+				else
+					@users = JSON.parse data
 	
 	getUserID: (from) ->
 		return from.toLowerCase() if typeof(from) is 'string'
