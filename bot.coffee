@@ -1,21 +1,23 @@
 # includes
+require 'coffee-script'
+
 fs = require 'fs'
-coffee = require 'coffee-script'
+yaml = require "#{__dirname}/lib/yaml"
 
 # 1: read config file
 try
-	config = fs.readFileSync "#{__dirname}/config.json", 'utf8'
+	config = fs.readFileSync "#{__dirname}/config.yml", 'utf8'
 catch e
-	console.error "[ERROR] config.json: #{e.message}"
-	console.error "[ERROR] config.json: error opening file"
+	console.error "[ERROR] config: #{e.message}"
+	console.error "[ERROR] config: error opening file"
 	process.exit 1
 
 # 2: parse it
 try
-	config = JSON.parse config
+	config = yaml.eval config
 catch e
-	console.error "[ERROR] config.json: #{e.message}"
-	console.error "[ERROR] config.json: error parsing file"
+	console.error "[ERROR] config: #{e.message}"
+	console.error "[ERROR] config: error parsing file"
 	process.exit 1
 
 #################
