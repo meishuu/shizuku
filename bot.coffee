@@ -364,21 +364,20 @@ class UserSettings
 	
 	getUserSetting: (from, module, setting, default_val) ->
 		return default_val if (user = @getUserID from) is false
-		@_get(@users, [user, module, setting]) ? default_val
+		_get(@users, [user, module, setting]) ? default_val
 	
 	setUserSetting: (from, module, setting, value) ->
 		return false if (user = @getUserID from) is false
-		@_set @users, [user, module, setting], value
+		_set @users, [user, module, setting], value
 	
 	_saveUsers: ->
-		console.log 'saving users.json'
 		fs.writeFile "#{__dirname}/data/users/#{@server}.json", JSON.stringify(@users), (err) -> console.warn err if err
 	
-	_get: (obj, keys) ->
+	_get = (obj, keys) ->
 		obj = obj[keys.shift()] while keys.length and obj?
 		obj
 	
-	_set: (obj, keys, val) ->
+	_set = (obj, keys, val) ->
 		final = keys.pop()
 		obj = obj[key] ?= {} for key in keys
 		obj[final] = val
