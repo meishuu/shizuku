@@ -157,6 +157,12 @@ class IRC
 	notice: (to, msg) ->
 		@sendRaw "NOTICE #{to} :#{msg}"
 	
+	reply: (from, to, msg) ->
+		if to[0] is '#'
+			@privmsg to, msg
+		else
+			@notice from.nick, msg
+	
 	_handle: (data) ->
 		if data[0] isnt ':' # server command
 			data = data.split ' '
