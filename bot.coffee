@@ -182,6 +182,7 @@ class IRC
 				switch cmd
 					# JOIN #
 					when 'JOIN'
+						@bot.modules.emit 'join', from, msg
 						break if from.nick isnt @bot.nick
 						@sendRaw "MODE #{msg}"
 						@sendRaw "WHO #{msg}"
@@ -222,6 +223,7 @@ class IRC
 					
 					# NOTICE #
 					when 'NOTICE'
+						@bot.modules.emit 'notice', from, to, msg
 						if from.nick == 'NickServ' and msg.indexOf('IDENTIFY') isnt -1
 							@privmsg 'NickServ', "IDENTIFY #{@bot.config.bot.pass}" if @bot.config.bot.pass isnt ''
 					
@@ -235,6 +237,7 @@ class IRC
 					
 					# QUIT #
 					when 'QUIT'
+						@bot.modules.emit 'quit', from
 						user = from.nick.toLowerCase()
 						delete @users[user]
 						(delete channel.users[user] if channel.users[user]?) for $, channel of @channels
