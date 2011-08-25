@@ -28,25 +28,26 @@ class ModuleHandler
 		@commands = {}
 		@modules = {}
 	
-	require: (module) ->
+	require: (module, reload = false) ->
 		try
 			path = require.resolve module
 		catch e
 			console.warn "[#{@bot.id}] ModuleHandler: ERROR! [#{module}]: #{e.message}"
 			return false
 		
-		delete require.cache[path]
+		delete require.cache[path] if reload
 		require(module)
 	
-	load: (module) ->
+	load: (module, reload = false) ->
 		# set up module
-		m = new @require(module)
+		m = new @require module, reload
 		m._events = {}
 		m.bot = @bot
 		m.on = (event, handler) => (m._events[event] ?= []).push handler
 		m.cmd = (command, handler) =>
-			throw "command '#{command}' already registered" if @commands[command]?
-			@commands[command.toLowerCase()] = {module: m, func: handler}
+			cmd = command.toLowerCase()
+			throw "command '#{command}' already registered to another module" if @commands[cmd]?.module is m
+			@commands[cmd] = {module: m, func: handler}
 		m.require = @require
 		
 		# load it!
@@ -60,9 +61,8 @@ class ModuleHandler
 		console.log "[#{@bot.id}] ModuleHandler: loaded '#{module}'"
 		return true
 	
-	reload: ->
-		@commands = {}
-		@load module for module of @modules
+	reload: (modules) ->
+		@load module, true for module in (if modules? then [].concat modules else @modules)
 		return
 	
 	emit: (event, args...) ->
