@@ -358,7 +358,7 @@ class UserSettings
 	getUserID: (from) ->
 		return from.toLowerCase() if typeof(from) is 'string'
 		try
-			return require('core_auth').getUserID(from)
+			return require('core_auth').getUserID(from, @server)
 		catch e
 			return from.nick.toLowerCase()
 	
