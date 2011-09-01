@@ -40,15 +40,15 @@ class ModuleHandler
 	
 	load: (module, reload = false) ->
 		# set up module
-		m = new @require module, reload
-		m._events = {}
-		m.bot = @bot
-		m.on = (event, handler) => (m._events[event] ?= []).push handler
-		m.cmd = (command, handler) =>
-			cmd = command.toLowerCase()
-			throw "command '#{command}' already registered to another module" if @commands[cmd]?.module is m
-			@commands[cmd] = {module: m, func: handler}
-		m.require = @require
+		m =
+			_events: {}
+			bot: @bot
+			on: (event, handler) -> (m._events[event] ?= []).push handler
+			cmd: (command, handler) =>
+				cmd = command.toLowerCase()
+				throw "command '#{command}' already registered to another module" if @commands[cmd]?.module is m
+				@commands[cmd] = {module: m, func: handler}
+			module: @require(module, reload).module
 		
 		# load it!
 		try
