@@ -3,6 +3,7 @@ require 'coffee-script'
 
 fs = require 'fs'
 yaml = require "#{__dirname}/lib/yaml"
+global.$util = require "#{__dirname}/lib/util"
 
 # 1: read config file
 try
