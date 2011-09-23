@@ -396,14 +396,11 @@ class UserSettings
 #######
 class bot
 	constructor: (@id, @config) ->
-		@users = new UserSettings(@)
-		@modules = new ModuleHandler(@)
+		@irc = new IRC @
+		@users = new UserSettings @
+		@modules = new ModuleHandler @
 		@modules.load module for module in @config.modules
-	
-	connect: ->
-		@irc = new IRC(@)
 
 # init
 bots = {}
-for id, settings of config
-	(bots[id] = new bot(id, settings)).connect()
+bots[id] = new bot id, settings for id, settings of config
