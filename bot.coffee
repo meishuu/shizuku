@@ -136,7 +136,7 @@ class IRC
 		true
 	
 	sendRaw: (data) ->
-		@socket.write data + '\r\n', 'utf8', =>
+		@socket.write data[0..509] + '\r\n', 'utf8', =>
 			console.log "[#{@bot.config.server.host}] << #{data}"
 	
 	getChannel: (channel) ->
