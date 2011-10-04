@@ -149,7 +149,7 @@ class IRC
 		@users[data.nick.toLowerCase()] = data
 	
 	privmsg: (to, msg) ->
-		lines = msg.split '\n'
+		lines = (msg + '').split '\n'
 		@sendRaw "PRIVMSG #{to} :#{line}" for line in lines
 	
 	action: (to, action) ->
