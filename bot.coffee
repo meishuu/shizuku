@@ -139,17 +139,43 @@ class IRC
 		@socket.write data[0..509] + '\r\n', 'utf8', =>
 			console.log "[#{@bot.config.server.host}] << #{data}"
 	
-	getChannel: (channel) ->
-		@channels[channel.toLowerCase()] ?= {created: 0, topic: {text: '', user: '', time: ''}, users: {}, modes: []}
+	###########
+	# Channel #
+	###########
+	class Channel
+		constructor: ->
+			@created = 0
+			@topic =
+				text: ''
+				user: ''
+				time: ''
+			@users = {}
+			@modes = []
 	
-	getUser: (nick) ->
-		@users[nick.toLowerCase()] ?= {ident: '', host: '', server: '', nick: '', away: false, modes: [], hops: 0, real: ''}
+	getChannel: (channel, create) ->
+		chan = channel.toLowerCase()
+		@channels[chan] ? (create && @channels[chan] = new Channel)
 	
-	_setUser: (data) ->
-		@users[data.nick.toLowerCase()] = data
+	########
+	# User #
+	########
+	class User
+		constructor: ->
+			@ident  = ''
+			@host   = ''
+			@server = ''
+			@nick   = ''
+			@away   = false
+			@modes  = []
+			@hops   = 0
+			@real   = ''
+	
+	getUser: (nick, create) ->
+		nick = nick.toLowerCase()
+		@users[nick] ? (create && @users[nick] = new User)
 	
 	privmsg: (to, msg) ->
-		lines = (msg + '').split '\n'
+		lines = (msg + '').split '\n' unless lines instanceof Array
 		@sendRaw "PRIVMSG #{to} :#{line}" for line in lines
 	
 	action: (to, action) ->
@@ -199,8 +225,7 @@ class IRC
 						if data[3] == @bot.nick
 							delete @channels[data[2].toLowerCase()]
 						else
-							channel = @getChannel data[2]
-							delete channel.users[data[3].toLowerCase()]
+							delete channel.users[data[3].toLowerCase()] if channel = @getChannel data[2]
 					
 					when 'MODE'
 						if (channel = data[2])[0] == '#'
@@ -266,22 +291,22 @@ class IRC
 							@sendRaw "JOIN #{chan} #{key || ''}"
 					
 					when '331' # RPL_NOTOPIC
-						@getChannel(data[3]).topic = {text: '', user: '', time: ''}
+						@getChannel(data[3], true).topic = {text: '', user: '', time: ''}
 					when '332' # RPL_TOPIC
-						@getChannel(data[3]).topic.text = msg
+						@getChannel(data[3], true).topic.text = msg
 					when '333'
-						topic = @getChannel(data[3]).topic
+						{topic} = @getChannel data[3], true
 						topic.user = data[4]
 						topic.time = data[5]
 					
 					when '324' # RPL_CHANNELMODES
 						# TODO: actually parse this
-						@getChannel(data[3]).modes = data[4].substr(1).split('')
+						@getChannel(data[3], true).modes = data[4].substr(1).split('')
 					when '329' # RPL_CREATIONTIME
-						@getChannel(data[3]).created = data[4]
+						@getChannel(data[3], true).created = data[4]
 					
 					when '353' # RPL_NAMREPLY
-						users = @getChannel(data[4]).users
+						{users} = @getChannel data[4], true
 						for nick in msg.split ' '
 							if nick isnt ''
 								# separate out user modes
@@ -311,27 +336,21 @@ class IRC
 						;
 					
 					when '311' # RPL_WHOISUSER
-						user = @getUser data[3]
+						user = @getUser data[3], true
 						user.nick  = data[3]
 						user.ident = data[4]
 						user.host  = data[5]
+						user.away  = false
 						user.real  = msg
-						@_setUser user
 					when '307' # "is a registered nick"
-						user = @getUser data[3]
-						if !~user.modes.indexOf 'r'
-							user.modes.push 'r'
-							@_setUser user
+						{modes} = @getUser data[3], true
+						modes.push 'r' if !~modes.indexOf 'r'
 					when '319' # RPL_WHOISCHANNELS
 						;
 					when '312' # RPL_WHOISSERVER
-						user = @getUser data[3]
-						user.server = data[4]
-						@_setUser user
+						@getUser(data[3], true).server = data[4]
 					when '301' # RPL_AWAY
-						user = @getUser data[3]
-						user.away = true
-						@_setUser user
+						@getUser(data[3], true).away = true
 					when '313' # RPL_WHOISOPERATOR
 						;
 					when '671' # "is using a Secure Connection"
