@@ -100,7 +100,9 @@ class IRC
 		@_buffer =
 			in: ''
 			out:
-				queue: []
+				prev_now: 0
+				next_send: 0
+				data: []
 		@_connect @bot.config.server
 	
 	_connect: (server) ->
@@ -135,9 +137,41 @@ class IRC
 		# done!
 		true
 	
+	_sendQueue: ->
+		t = Date.now()
+		sendq = @_buffer.out
+		
+		while sendq.data.length > 0
+			# if next_send is in the past, we're safe to send messages.
+			# update next_send to the current timestamp as a minimum value
+			if t > sendq.next_send
+				sendq.next_send = t
+			
+			# if next_send is at least 10 seconds in the future, we should wait.
+			# however, if it seems like we suddenly jumped into the past,
+			# the clock time probably changed, so set next_send to the current time.
+			if sendq.next_send - t > 10000
+				if sendq.prev_now <= t
+					setTimeout (@_sendQueue.bind @), 500
+					return false
+				else
+					sendq.next_send = t
+			
+			# carry on, then
+			line = sendq.data.shift()
+			sendq.next_send += (2 + line.length / 120 | 0) * 1000
+			sendq.prev_now = t
+			@socket.write line, 'utf8', => console.log "[#{@bot.config.server.host}] << #{line[0...-2]}"
+		
+		# all done! queue is empty now.
+		return true
+	
 	sendRaw: (data) ->
-		@socket.write data[0..509] + '\r\n', 'utf8', =>
-			console.log "[#{@bot.config.server.host}] << #{data}"
+		line = (data + '')[0..509] + '\r\n'
+		empty_queue = @_buffer.out.data.length is 0
+		
+		@_buffer.out.data.push line
+		@_sendQueue() if empty_queue
 	
 	###########
 	# Channel #
