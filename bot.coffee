@@ -409,7 +409,7 @@ class UserSettings
 		
 		folder = "#{__dirname}/data/users"
 		fs.stat folder, (err, stats) =>
-			fs.mkdirSync folder, 0644 if !stats.isDirectory()
+			fs.mkdirSync folder, 0644 unless stats?.isDirectory()
 			fs.readFile "#{folder}/#{@server}.json", 'utf8', (err, data) =>
 				if err
 					throw err if err.code isnt 'ENOENT'
