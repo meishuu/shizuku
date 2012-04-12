@@ -2,23 +2,15 @@
 require 'coffee-script'
 
 fs = require 'fs'
-yaml = require "#{__dirname}/lib/yaml"
+yaml = require "js-yaml"
 global.$util = require "#{__dirname}/lib/util"
 
-# 1: read config file
+# config file
 try
-	config = fs.readFileSync "#{__dirname}/config.yml", 'utf8'
+	config = (require "#{__dirname}/config.yml").shift()
 catch e
 	console.error "[ERROR] config: #{e.message}"
 	console.error "[ERROR] config: error opening file"
-	process.exit 1
-
-# 2: parse it
-try
-	config = yaml.eval config
-catch e
-	console.error "[ERROR] config: #{e.message}"
-	console.error "[ERROR] config: error parsing file"
 	process.exit 1
 
 #################
@@ -37,7 +29,7 @@ class ModuleHandler
 			return false
 		
 		delete require.cache[path] if reload
-		require(module)
+		require module
 	
 	load: (module, reload = false) ->
 		# set up module
@@ -77,7 +69,7 @@ class ModuleHandler
 		return
 	
 	command: (from, to, msg) ->
-		args = msg.split(' ')
+		args = msg.split ' '
 		cmd = args[0].substr(1).toLowerCase()
 		return if !(data = @commands[cmd])?
 		try
@@ -409,7 +401,7 @@ class UserSettings
 		
 		folder = "#{__dirname}/data/users"
 		fs.stat folder, (err, stats) =>
-			fs.mkdirSync folder, 0644 unless stats?.isDirectory()
+			fs.mkdirSync folder, 0o644 unless stats?.isDirectory()
 			fs.readFile "#{folder}/#{@server}.json", 'utf8', (err, data) =>
 				if err
 					throw err if err.code isnt 'ENOENT'
